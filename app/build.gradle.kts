@@ -89,4 +89,7 @@ dependencies {
 
     implementation("org.jetbrains:markdown:0.7.3")
 
+    implementation("androidx.datastore:datastore-preferences:1.2.0")
+
+
 }

@@ -1,5 +1,8 @@
 package com.blackzshaik.tap.ai
 
+import com.blackzshaik.tap.ai.model.ChatCompletion
+import com.blackzshaik.tap.ai.model.ChatMessage
+import com.blackzshaik.tap.ai.model.ChatRequest
 import com.blackzshaik.tap.ai.model.PostResponse
 import com.blackzshaik.tap.ai.model.Response
 import io.ktor.client.HttpClient
@@ -9,7 +12,6 @@ import io.ktor.client.request.post
 import io.ktor.client.request.setBody
 import io.ktor.http.ContentType
 import io.ktor.http.contentType
-import java.util.concurrent.TimeUnit
 
 object PostInference {
     private const val POST_SYSTEM_INSTRUCTION = """
@@ -22,7 +24,7 @@ You are a helpful AI chat bot.
         return try {
             client.post(base_url + chatEndPoint) {
                 this.contentType(ContentType.Application.Json)
-                setBody(ChatRequest(MODEL, "", conversationHistory.toTypedArray()))
+                setBody(ChatRequest(MODEL, "", conversationHistory.toTypedArray(),emptyArray()))
                 this.timeout {
                     requestTimeoutMillis = 300000
                 }

@@ -14,6 +14,7 @@ import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
+import androidx.compose.material.icons.filled.Settings
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
@@ -39,12 +40,15 @@ import androidx.navigation3.runtime.NavEntry
 import androidx.navigation3.runtime.rememberSaveableStateHolderNavEntryDecorator
 import androidx.navigation3.ui.NavDisplay
 import com.blackzshaik.tap.ui.theme.TAPTheme
+import com.blackzshaik.tap.ui.theme.components.TAPIconButton
 import com.blackzshaik.tap.view.ArtifactHistoryScreen
 import com.blackzshaik.tap.view.ArtifactScreen
 import com.blackzshaik.tap.view.HomeScreen
+import com.blackzshaik.tap.view.SettingsScreen
 import com.blackzshaik.tap.view.navigation.ArtifactHistoryNav
 import com.blackzshaik.tap.view.navigation.ArtifactNav
 import com.blackzshaik.tap.view.navigation.HomeNav
+import com.blackzshaik.tap.view.navigation.SettingsNav
 import dagger.hilt.android.AndroidEntryPoint
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.launch
@@ -65,7 +69,7 @@ class MainActivity : ComponentActivity() {
     @OptIn(ExperimentalMaterial3Api::class)
     @Preview
     @Composable
-    fun TopBar(showTitle: Boolean = true,onClickBack: () -> Unit = {}){
+    fun TopBar(showTitle: Boolean = true,onClickBack: () -> Unit = {}, onClickActions:() -> Unit = {}){
         TopAppBar({
             if(showTitle){
                 Text("Threaded Artifact Protocol")
@@ -101,6 +105,11 @@ class MainActivity : ComponentActivity() {
 
             }
         },
+            actions = {
+                if(showTitle){
+                    TAPIconButton(Modifier,{onClickActions()}, Icons.Default.Settings)
+                }
+            },
             colors = TopAppBarDefaults.topAppBarColors(
                 titleContentColor  = MaterialTheme.colorScheme.onPrimaryContainer,
                 containerColor = MaterialTheme.colorScheme.primaryContainer))
@@ -116,9 +125,13 @@ class MainActivity : ComponentActivity() {
         Scaffold(
             modifier = Modifier.fillMaxSize(),
             topBar = {
-                TopBar(showTitle = backStack.last() == HomeNav){
+                TopBar(showTitle = backStack.last() == HomeNav, onClickBack = {
                     backStack.removeLastOrNull()
+                },
+                onClickActions = {
+                    backStack.add(SettingsNav)
                 }
+                )
             },
             snackbarHost = {
                 SnackbarHost(snackBarHostState)
@@ -169,6 +182,12 @@ class MainActivity : ComponentActivity() {
                             ArtifactHistoryScreen(data = it)
                         } ?: Text("404 Not Found")
 
+                    }
+
+                    is SettingsNav -> NavEntry(it){
+                        SettingsScreen{
+                            showErrorSnackBar(it)
+                        }
                     }
 
                     else -> NavEntry(it) {

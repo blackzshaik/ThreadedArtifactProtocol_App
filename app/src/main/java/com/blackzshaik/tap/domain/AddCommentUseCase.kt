@@ -6,13 +6,15 @@ import com.blackzshaik.tap.model.ArtifactHistory
 import com.blackzshaik.tap.model.Comment
 import com.blackzshaik.tap.model.NetworkRepository
 import com.blackzshaik.tap.model.database.DatabaseRepository
+import com.blackzshaik.tap.utils.CommentsDepth
 import java.util.UUID
 import javax.inject.Inject
 
 class AddCommentUseCase @Inject constructor(
     private val databaseRepository: DatabaseRepository,
     private val networkRepository: NetworkRepository,
-    private val getAllParentCommentsUseCase: GetAllParentCommentsUseCase
+    private val getAllParentCommentsUseCase: GetAllParentCommentsUseCase,
+    private val commentsDepthPreferenceUseCase: CommentsDepthPreferenceUseCase
 ) {
     suspend operator fun invoke(
         artifactId: String,
@@ -21,12 +23,40 @@ class AddCommentUseCase @Inject constructor(
         commentList: List<Comment> = emptyList()
     ): Artifact {
         val artifact = databaseRepository.getArtifactById(artifactId)
-        val parentComments = selectedComment?.let {
-            getAllParentCommentsUseCase(commentList, selectedComment)
-        } ?: emptyList()
+        val commentsDepth = commentsDepthPreferenceUseCase()
+
+        val parentComments = when(commentsDepth) {
+            CommentsDepth.MINIMUM -> {
+                //single comment without context or replies
+                 selectedComment?.let {
+                    getAllParentCommentsUseCase(commentList, selectedComment)
+                } ?: emptyList()
+            }
+            CommentsDepth.OPTIMAL -> {
+                val replies = selectedComment?.let {
+                    getAllParentCommentsUseCase(commentList, selectedComment)
+                }
+
+                //only top level comments with replies or current
+                commentList.filter { it.parentId == artifact._id }.plus(replies ?: emptyList())
+            }
+            CommentsDepth.FULL -> {
+                //all comments
+                commentList
+            }
+        }
+
+
 
         val userCommentParentID = try {
-            parentComments.last().id
+            when (commentsDepth) {
+                CommentsDepth.MINIMUM -> {
+                    parentComments.last().id
+                }
+                else -> {
+                    selectedComment?.id ?: artifactId
+                }
+            }
         } catch (nse: NoSuchElementException) {
             artifact._id
         }

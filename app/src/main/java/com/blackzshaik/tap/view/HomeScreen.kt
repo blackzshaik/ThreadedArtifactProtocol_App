@@ -12,6 +12,7 @@ import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.shape.RoundedCornerShape
@@ -28,9 +29,11 @@ import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.remember
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.draw.alpha
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.text.AnnotatedString
+import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.fromHtml
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.tooling.preview.Preview
@@ -79,7 +82,7 @@ fun HomeScreen(viewModel: HomeViewModel = hiltViewModel(),
 fun HomeScreenContent(uiState: HomeUiState, handleIntent: (HomeIntent) -> Unit = {}) {
     val sdf = remember { SimpleDateFormat("hh:mm a") }
 
-    Box(Modifier.fillMaxSize().background(MaterialTheme.colorScheme.primary)) {
+    Box(Modifier.fillMaxSize().background(MaterialTheme.colorScheme.primaryContainer)) {
         LazyColumn() {
             items(uiState.artifactList){
                 Column(
@@ -87,29 +90,23 @@ fun HomeScreenContent(uiState: HomeUiState, handleIntent: (HomeIntent) -> Unit =
                         .padding(8.dp)
                         .fillMaxWidth()
                         .clip(MaterialTheme.shapes.medium)
-//                        .border(0.5.dp, MaterialTheme.colorScheme.onTertiary, MaterialTheme.shapes.medium)
-                        .background(MaterialTheme.colorScheme.tertiaryContainer)
-                        .padding(8.dp)
+                        .background(MaterialTheme.colorScheme.secondaryContainer)
                         .clickable{
                             handleIntent(HomeIntent.OnClickArtifact(it))
                         }
                 ) {
                     Column (Modifier
                         .clip(MaterialTheme.shapes.medium)
-//                        .border(0.5.dp, MaterialTheme.colorScheme.onSecondary, MaterialTheme.shapes.medium)
-
                         .background(MaterialTheme.colorScheme.secondaryContainer)
                         .padding(8.dp)){
                         Box (Modifier.fillMaxWidth()
                             .clip(MaterialTheme.shapes.medium)
-//                            .border(0.5.dp, MaterialTheme.colorScheme.onPrimary, MaterialTheme.shapes.medium)
-
-                            .background(MaterialTheme.colorScheme.primaryContainer)
+                            .background(MaterialTheme.colorScheme.tertiaryContainer)
                             .padding(8.dp)){
                             Text(
                                 it.prompt,
-                                style = MaterialTheme.typography.headlineSmall,
-                                color = MaterialTheme.colorScheme.onPrimaryContainer,
+                                style = MaterialTheme.typography.titleMedium,
+                                color = MaterialTheme.colorScheme.onTertiaryContainer,
                                 maxLines = 1,
                                 overflow = TextOverflow.Ellipsis
                             )
@@ -120,7 +117,7 @@ fun HomeScreenContent(uiState: HomeUiState, handleIntent: (HomeIntent) -> Unit =
                         Text(
                             AnnotatedString.fromHtml(it.artifact.toMarkDown()),
                             modifier = Modifier.padding(horizontal = 8.dp),
-                            style = MaterialTheme.typography.bodyLarge,
+                            style = MaterialTheme.typography.bodyMedium,
                             color = MaterialTheme.colorScheme.onSecondaryContainer,
                             maxLines = 4,
                             overflow = TextOverflow.Ellipsis
@@ -130,23 +127,24 @@ fun HomeScreenContent(uiState: HomeUiState, handleIntent: (HomeIntent) -> Unit =
 
                     Spacer(Modifier.height(6.dp))
 
-                    Row(Modifier.fillMaxWidth().padding(horizontal = 8.dp)) {
+                    Row(Modifier.fillMaxWidth().alpha(0.75f).padding(horizontal = 16.dp).padding(bottom = 16.dp), verticalAlignment = Alignment.CenterVertically) {
                         Row(Modifier.weight(1f)) {
                             Icon(
                                 painter = painterResource(R.drawable.round_comment_24),
                                 "",
+                                modifier = Modifier.size(16.dp),
                                 tint = MaterialTheme.colorScheme.onTertiaryContainer
                             )
                             Text(
                                 it.commentCount.toString(),
                                 modifier = Modifier.padding(start = 8.dp),
-                                style = MaterialTheme.typography.bodyMedium,
+                                style = MaterialTheme.typography.bodySmall,
                                 color = MaterialTheme.colorScheme.onTertiaryContainer
                             )
                         }
                         Text(
                             "Last updated ${sdf.format(it.time)}",
-                            style = MaterialTheme.typography.bodyMedium,
+                            style = MaterialTheme.typography.bodySmall,
                             color = MaterialTheme.colorScheme.onTertiaryContainer
                         )
                     }

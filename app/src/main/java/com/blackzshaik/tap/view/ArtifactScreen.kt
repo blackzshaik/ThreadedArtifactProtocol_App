@@ -4,6 +4,7 @@ import androidx.compose.foundation.background
 import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.gestures.detectDragGestures
+import androidx.compose.foundation.interaction.MutableInteractionSource
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
@@ -45,6 +46,7 @@ import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.draw.alpha
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.draw.rotate
 import androidx.compose.ui.draw.shadow
@@ -70,9 +72,13 @@ import com.blackzshaik.tap.intent.ArtifactIntent
 import com.blackzshaik.tap.model.Artifact
 import com.blackzshaik.tap.model.Comment
 import com.blackzshaik.tap.ui.theme.TAPTheme
+import com.blackzshaik.tap.ui.theme.components.HourGlassLoading
+import com.blackzshaik.tap.ui.theme.components.TAPIconButton
+import com.blackzshaik.tap.ui.theme.components.TAPTextField
 import com.blackzshaik.tap.utils.toMarkDown
 import com.blackzshaik.tap.viewmodel.ArtifactUiState
 import com.blackzshaik.tap.viewmodel.ArtifactViewModel
+import kotlinx.coroutines.delay
 import java.text.SimpleDateFormat
 import kotlin.math.roundToInt
 
@@ -199,15 +205,30 @@ private fun CommentSection(
         val gradientTop = Brush.verticalGradient(
             colors = listOf(
                 MaterialTheme.colorScheme.secondaryContainer,
-                MaterialTheme.colorScheme.secondaryContainer,
-                Color.Transparent),
+                MaterialTheme.colorScheme.tertiaryContainer,
+                MaterialTheme.colorScheme.tertiaryContainer,
+                Color.Transparent
+            ),
             startY = 0f
         )
-        Text("Comments", Modifier.fillMaxWidth().background(gradientTop).padding(8.dp).zIndex(1f), color = MaterialTheme.colorScheme.onSecondaryContainer)
+        Box(Modifier
+            .fillMaxWidth()
+            .background(gradientTop)
+            .zIndex(1f)) {
+
+            Text(
+                "Comments",
+                Modifier
+                    .fillMaxWidth()
+                    .padding(8.dp)
+                    .padding(bottom = 16.dp),
+                color = MaterialTheme.colorScheme.onSecondaryContainer
+            )
+        }
         LazyColumn(
             Modifier.fillMaxWidth(),
             lazyListState,
-            contentPadding = PaddingValues(top = 40.dp,bottom = 72.dp)
+            contentPadding = PaddingValues(top = 40.dp, bottom = 72.dp)
         ) {
             items(uiState.commentList, key = { item -> item.id }) { item ->
                 CommentItem(item, uiState, sdf, handleIntent)
@@ -229,12 +250,6 @@ private fun CommentSection(
                 .background(gradient)
         ) {
             Spacer(Modifier.height(16.dp))
-            if (uiState.isGeneratingResponse) {
-                Text(
-                    "Generating response... Please wait....",
-                    color = MaterialTheme.colorScheme.onSecondary
-                )
-            }
             if (uiState.replyAssistantComment != null && !uiState.isGeneratingResponse) {
                 Row(
                     Modifier
@@ -284,28 +299,27 @@ private fun CommentSection(
                     .fillMaxWidth(),
                 verticalAlignment = Alignment.CenterVertically
             ) {
-                TAPTextField(comment, onCommentChange, "Add a comment")
-                Box(
-                    Modifier
-                        .padding(start = 8.dp)
-                        .size(48.dp)
-                        .clickable {
+                TAPTextField(Modifier.weight(1f), comment, onCommentChange, "Add a comment")
+                Box(Modifier.size(64.dp), contentAlignment = Alignment.Center) {
+                    if (uiState.isGeneratingResponse) {
+                        HourGlassLoading()
+                    } else {
+                        TAPIconButton(Modifier, {
                             if (!uiState.isGeneratingResponse && comment.isNotBlank()) {
                                 handleIntent(ArtifactIntent.AddComment(comment))
                                 onCommentChange("")
                                 focusManager.clearFocus()
                             }
-                        }
-                        .clip(CircleShape)
-                        .background(MaterialTheme.colorScheme.onSecondaryContainer),
-                    contentAlignment = Alignment.Center) {
-                    Icon(
-                        painterResource(R.drawable.round_send_24),
-                        "",
-                        modifier = Modifier.rotate(-25f),
-                        tint = if (!uiState.isGeneratingResponse && comment.isNotBlank()) MaterialTheme.colorScheme.secondary
-                        else MaterialTheme.colorScheme.secondary.copy(alpha = 0.5f)
-                    )
+                        }, {
+                            Icon(
+                                painterResource(R.drawable.round_send_24),
+                                "",
+                                modifier = Modifier.rotate(-25f),
+                                tint = if (!uiState.isGeneratingResponse && comment.isNotBlank()) MaterialTheme.colorScheme.onTertiaryContainer
+                                else MaterialTheme.colorScheme.onTertiaryContainer.copy(alpha = 0.5f)
+                            )
+                        })
+                    }
                 }
             }
         }
@@ -316,57 +330,6 @@ private fun CommentSection(
     }
 }
 
-@Composable
-fun RowScope.TAPTextField(
-    comment: String,
-    onCommentChange: (String) -> Unit,
-    placeholder: String,
-    minLines: Int = 1,
-    maxLines: Int = 4
-) {
-    Box(
-        Modifier
-            .weight(1f)
-            .fillMaxWidth()
-            .clip(RoundedCornerShape(16.dp))
-            .background(MaterialTheme.colorScheme.primaryContainer)
-            .padding(4.dp)
-    ) {
-        TextField(
-            comment, onCommentChange,
-            modifier = Modifier
-
-                .fillMaxWidth()
-                .border(
-                    1.dp,
-                    MaterialTheme.colorScheme.tertiaryContainer,
-                    RoundedCornerShape(16.dp)
-                )
-                .shadow(4.dp, RoundedCornerShape(16.dp)),
-            placeholder = {
-                Text(placeholder)
-            },
-            shape = RoundedCornerShape(16.dp),
-            minLines = minLines,
-            maxLines = maxLines,
-            colors = TextFieldDefaults.colors(
-                focusedTextColor = MaterialTheme.colorScheme.onSecondaryContainer,
-                unfocusedTextColor = MaterialTheme.colorScheme.onTertiaryContainer,
-                disabledTextColor = MaterialTheme.colorScheme.onTertiaryContainer.copy(
-                    alpha = 0.5f
-                ),
-                focusedContainerColor = MaterialTheme.colorScheme.secondaryContainer,
-                unfocusedContainerColor = MaterialTheme.colorScheme.tertiaryContainer,
-                disabledContainerColor = MaterialTheme.colorScheme.tertiaryContainer.copy(
-                    alpha = 0.5f
-                ),
-                focusedIndicatorColor = Color.Transparent,
-                unfocusedIndicatorColor = Color.Transparent,
-                disabledIndicatorColor = Color.Transparent
-            )
-        )
-    }
-}
 
 @Composable
 private fun CommentItem(
@@ -394,9 +357,10 @@ private fun CommentItem(
             verticalAlignment = Alignment.CenterVertically
         ) {
             Text(
-                if (item.role == "user") "User" else "Assistant",
+                if (item.role == "user") uiState.userName else uiState.assistantName,
                 Modifier.padding(8.dp),
                 color = MaterialTheme.colorScheme.onSecondaryContainer,
+                style = MaterialTheme.typography.titleSmall,
                 fontWeight = FontWeight.Bold
             )
             Text(
@@ -445,7 +409,8 @@ private fun CommentItem(
             Text(
                 AnnotatedString.fromHtml(item.content.toMarkDown()),
                 color = MaterialTheme.colorScheme.onTertiaryContainer,
-                modifier = Modifier.weight(1f)
+                modifier = Modifier.weight(1f),
+                style = MaterialTheme.typography.bodyMedium
             )
         }
 
@@ -470,6 +435,7 @@ private fun ArtifactSection(
     uiState: ArtifactUiState,
     handleIntent: (ArtifactIntent) -> Unit
 ) {
+    var showFullScreenButton by remember { mutableStateOf(false) }
     Column(
         Modifier
             .height(with(LocalDensity.current) { sectionHeight.toDp() })
@@ -492,6 +458,9 @@ private fun ArtifactSection(
                 Modifier
                     .padding(horizontal = 8.dp)
                     .fillMaxHeight()
+                    .clickable(interactionSource = remember { MutableInteractionSource() }, indication = null){
+                        showFullScreenButton = !showFullScreenButton
+                    }
                     .padding(bottom = 8.dp)
                     .clip(RoundedCornerShape(4.dp))
                     .shadow(4.dp, RoundedCornerShape(4.dp))
@@ -505,25 +474,37 @@ private fun ArtifactSection(
                         .fillMaxWidth()
                         .fillMaxHeight(), color = MaterialTheme.colorScheme.onSecondaryContainer
                 )
-                Box(
-                    Modifier
-                        .padding(8.dp)
-                        .size(40.dp)
-                        .clip(CircleShape)
-                        .background(MaterialTheme.colorScheme.secondaryContainer.copy(alpha = 0.5f))
-                        .clickable {
-                            handleIntent(ArtifactIntent.OnClickShowFullScreen)
-                        }
-                        .align(Alignment.BottomEnd),
-                    contentAlignment = Alignment.Center
-                ) {
-                    Icon(
-                        painterResource(R.drawable.round_fullscreen_24),
-                        "Show full screen button",
-                        tint = MaterialTheme.colorScheme.onSecondaryContainer.copy(alpha = 0.5f)
-                    )
+
+                if(showFullScreenButton){
+                    Box(
+                        Modifier
+                            .padding(8.dp)
+                            .align(Alignment.BottomEnd),
+                        contentAlignment = Alignment.Center
+                    ) {
+                        TAPIconButton(
+                            Modifier.align (Alignment.BottomCenter).alpha(0.75f),
+                            {
+                                handleIntent(ArtifactIntent.OnClickShowFullScreen)
+                            },
+                            {
+                                Icon(
+                                    painterResource(R.drawable.round_fullscreen_24),
+                                    "Show full screen button",
+                                    tint = MaterialTheme.colorScheme.onSecondaryContainer.copy(alpha = 0.5f)
+                                )
+                            }
+                        )
+                    }
                 }
             }
+        }
+    }
+
+    LaunchedEffect(showFullScreenButton) {
+        if (showFullScreenButton){
+            delay(3000)
+            showFullScreenButton = false
         }
     }
 }
@@ -573,8 +554,8 @@ fun ArtifactScreenPreview() {
                     ),
                     isGeneratingResponse = false,
                     replyAssistantComment = null,
-                    
-                )
+
+                    )
             )
         }
     }

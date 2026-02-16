@@ -1,4 +1,4 @@
-package com.blackzshaik.tap.ai
+package com.blackzshaik.tap.ai.model
 
 import kotlinx.serialization.Serializable
 
@@ -29,7 +29,16 @@ data class Usage(
 )
 
 @Serializable
-data class ChatMessage(val role:String, val content:String, val tool_calls: Array<String>?= null)
+data class ChatMessage(val role:String,
+                       val content:String,
+                       val tool_calls: Array<ToolCall>?= null,
+                       val tool_call_id:String = ""
+)
 
 @Serializable
-data class ChatRequest(val model:String, val instruction:String, val messages : Array<ChatMessage>)
+data class ChatRequest(val model:String,
+                       val instruction:String,
+                       val messages : Array<ChatMessage>,
+                       val tools:Array<ToolUse>,
+                       val temperature: Float =  0.6f
+)

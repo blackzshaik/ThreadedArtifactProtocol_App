@@ -1,5 +1,6 @@
 package com.blackzshaik.tap.view
 
+import android.content.res.Configuration
 import androidx.compose.animation.Animatable
 import androidx.compose.animation.animateColorAsState
 import androidx.compose.animation.core.LinearEasing
@@ -37,12 +38,14 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
+import androidx.compose.ui.draw.innerShadow
 import androidx.compose.ui.draw.scale
 import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.TileMode
 import androidx.compose.ui.graphics.graphicsLayer
+import androidx.compose.ui.graphics.shadow.Shadow
 import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.tooling.preview.Preview
@@ -50,9 +53,13 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.window.Dialog
 import com.blackzshaik.tap.R
 import com.blackzshaik.tap.ui.theme.TAPTheme
+import com.blackzshaik.tap.ui.theme.components.HourGlassLoading
+import com.blackzshaik.tap.ui.theme.components.TAPTextField
 import kotlinx.coroutines.delay
 
-@Preview
+@Preview(showBackground = false,
+    uiMode = Configuration.UI_MODE_NIGHT_YES or Configuration.UI_MODE_TYPE_NORMAL
+)
 @Composable
 fun CreateArtifactDialog(
     showLoading: Boolean = false,
@@ -129,43 +136,14 @@ fun CreateArtifactDialog(
                         )
                     }
                     Spacer(Modifier.height(16.dp))
-                    val hourGlassAnimation = animateFloatAsState(
-                        if (animateHourGlass) 360f else 1f,
-                        animationSpec = infiniteRepeatable(
-                            animation = tween(2500, easing = LinearEasing),
-                            repeatMode = RepeatMode.Reverse
-                        ),
-                        label = "hour glass animation"
-
-
-                    )
-                    Icon(
-                        painter = painterResource(R.drawable.round_hourglass_top_24),
-                        "",
-                        tint = MaterialTheme.colorScheme.onPrimary,
-                        modifier = Modifier
-                            .graphicsLayer {
-
-                                rotationZ = hourGlassAnimation.value
-                            }
-                            .scale(1.5f)
-                    )
-                    LaunchedEffect(animateHourGlass) {
-                        if (!animateHourGlass) {
-                            animateHourGlass = true
-                        }
-                    }
+                    HourGlassLoading()
                 }
             } else {
                 Column(
                     Modifier
                         .fillMaxWidth()
                         .clip(MaterialTheme.shapes.medium)
-                        .border(
-                            1.dp,
-                            MaterialTheme.colorScheme.tertiary,
-                            MaterialTheme.shapes.medium
-                        )
+                        .innerShadow(MaterialTheme.shapes.medium, Shadow(radius = 8.dp,spread =1.dp))
                         .background(MaterialTheme.colorScheme.primaryContainer)
                 ) {
                     Text(
@@ -174,18 +152,17 @@ fun CreateArtifactDialog(
                             .padding(8.dp)
                             .fillMaxWidth(),
                         style = MaterialTheme.typography.titleLarge,
-                        color = MaterialTheme.colorScheme.onPrimary,
+                        color = MaterialTheme.colorScheme.onPrimaryContainer,
                         textAlign = TextAlign.Center
                     )
-                    Row() {
-                        TAPTextField(
+                        TAPTextField(Modifier,
                             prompt, {
                                 setPrompt(it)
                             },
 
                             "Enter your prompt here...", minLines = 4
                         )
-                    }
+
                     Row(
                         Modifier
                             .fillMaxWidth()
@@ -210,7 +187,7 @@ fun CreateArtifactDialog(
                             {
                                 onClickCreate(prompt)
                             },
-                            colors = ButtonDefaults.textButtonColors(containerColor = MaterialTheme.colorScheme.onSecondaryContainer)
+                            colors = ButtonDefaults.textButtonColors(containerColor = MaterialTheme.colorScheme.secondaryContainer)
                         ) {
                             Icon(Icons.Default.Done, "")
                             Text("Create")
@@ -225,12 +202,14 @@ fun CreateArtifactDialog(
     }
 }
 
-@Preview
+@Preview(showSystemUi = false, showBackground = false,
+    uiMode = Configuration.UI_MODE_NIGHT_YES or Configuration.UI_MODE_TYPE_NORMAL
+)
 @Composable
 fun CreateArtifactDialogPreview() {
     TAPTheme() {
         Box(Modifier.fillMaxSize()) {
-            CreateArtifactDialog(showLoading = true) { }
+            CreateArtifactDialog(showLoading = false) { }
         }
     }
 }

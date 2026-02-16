@@ -1,7 +1,15 @@
 package com.blackzshaik.tap.ai
 
+import com.blackzshaik.tap.ai.model.ChatCompletion
+import com.blackzshaik.tap.ai.model.ChatMessage
+import com.blackzshaik.tap.ai.model.ChatRequest
 import com.blackzshaik.tap.ai.model.CommentResponse
+import com.blackzshaik.tap.ai.model.Function
+import com.blackzshaik.tap.ai.model.ParamProperties
+import com.blackzshaik.tap.ai.model.Params
 import com.blackzshaik.tap.ai.model.Response
+import com.blackzshaik.tap.ai.model.ToolUse
+import com.blackzshaik.tap.ai.model.UpdateArtifact
 import com.blackzshaik.tap.model.Artifact
 import com.blackzshaik.tap.model.Comment
 import io.ktor.client.HttpClient
@@ -11,32 +19,22 @@ import io.ktor.client.request.post
 import io.ktor.client.request.setBody
 import io.ktor.http.ContentType
 import io.ktor.http.contentType
-
-
+import kotlinx.serialization.json.Json
 
 
 object CommentInference {
 
 
-        private const val COMMENT_SYSTEM_INSTRUCTION = """
+    private const val COMMENT_SYSTEM_INSTRUCTION = """
 You are an iterative Engine.
 You do not just chat. 
 You produce deliverable.
-You MUST always update the artifact based on user's comment.
-You don't ask followup question in the comments, you explain only about the changes. Not all user comments need modification, so assess the input carefully.
+You MUST update the artifact only if the user's comment requested a change.
+You MUST use tool to update the artifact. If an artifact is updated briefly explain about the changes made as your response.
+You don't ask follow up question in the comments, you explain only about the changes. Not all user comments need modification, so assess the input carefully.
 
 User will provide the comment with <comment> tag.
-When a user comments, analyze the comment based on the user's requirement update the artifact following the below convention, always include the same text including the formatting.
-If modification needed reply in the below format:
-<update_artifact>
-    <org>EXACT text to be replaced in the artifact</org>
-    <rep>UPDATED text to be replace in the artifact</rep>
-</update_artifact>
-
-Explanation:
-<update_artifact> tag contains the block which has both the original text from the original artifact and the updated text
-<org> is the tag for original text, a sentence or a paragraph with exact formatting, you must include the entire part of text that needs to be updated.
-<rep> is the updated text that fulfils users's request, 
+When a user comments, analyze the comment based on the user's requirement update the artifact by always include the same text including the formatting.
 
 Additionally add a comment yourself briefly explaining about the update.
 
@@ -45,49 +43,126 @@ Example scenarios:
 2) In another case if the user just asks a question why a scene ended like that, there is not need to update the artifact, only reply with an explanation.
 """
 
-    suspend operator fun invoke(client: HttpClient,
-                                artifact: Artifact,
-                                newComment:String,
-                                commentHistory: List<Comment>): Response {
-        val conversationHistory = createConversationHistory( artifact, commentHistory, newComment)
+    val updateArtifactTool = ToolUse(
+        type = "function",
+        function = Function(
+            name = "update_artifact",
+            description = "To update/modify part of the artifact",
+            parameters = Params(
+                type = "object",
+                properties = mapOf(
+                    "orgStr" to ParamProperties(
+                        "string",
+                        "Original text present in the Artifact. IMPORTANT: this has to be matched exactly for successful modification, for updates this can be empty based on the context"
+                    ),
+                    "repStr" to ParamProperties(
+                        "string",
+                        "Text to be updated in the original artifact, if orgStr is empty, this will be added to the last"
+                    )
+                ),
+                required = arrayOf("repStr")
+            )
+        )
+    )
+
+    suspend operator fun invoke(
+        client: HttpClient,
+        artifact: Artifact,
+        newComment: String,
+        commentHistory: List<Comment>
+    ): Response {
+        val conversationHistory = createConversationHistory(artifact, commentHistory, newComment)
         try {
             val response = client.post(base_url + chatEndPoint) {
                 this.contentType(ContentType.Application.Json)
-                setBody(ChatRequest(MODEL, "", conversationHistory.toTypedArray()))
+                setBody(
+                    ChatRequest(
+                        MODEL,
+                        "",
+                        conversationHistory.toTypedArray(),
+                        tools = arrayOf(updateArtifactTool)
+                    )
+                )
                 this.timeout {
                     requestTimeoutMillis = 300000
                 }
             }.body<ChatCompletion>()
-            val content = response.choices.first().message.content
-            val (updatedArtifact,originalArtifactStr,replaceArtifactStr) = getUpdateArtifact(content)?.let { comment ->
-                val updatedArtifact = artifact.artifact.replace(comment.first, comment.second)
-                Triple(updatedArtifact, comment.first, comment.second)
-            } ?: Triple(null, null, null)
+            return checkAndUseTool(client, conversationHistory, response, artifact, newComment)
+                ?: CommentResponse(
+                    artifact.artifact,
+                    null,
+                    newComment,
+                    response.choices.first().message.content,
+                    null,
+                    null
+                )
+        } catch (e: Exception) {
+            return Response.ErrorResponse(e.message ?: "Something went wrong")
+        }
+    }
 
-            val assistantComment = try {
-                content.indexOf("</update_artifact>").let {
-                    if (it != -1) {
-                        content.substring(it + "</update_artifact>".length).removePrefix("\n")
-                    } else {
-                        content
-                    }
+    suspend fun checkAndUseTool(
+        client: HttpClient,
+        conversationHistory: MutableList<ChatMessage>,
+        chatCompletion: ChatCompletion,
+        artifact: Artifact,
+        newComment: String
+    ): CommentResponse? {
+        val toolCall = try {
+            chatCompletion.choices.first().message.tool_calls?.first()
+        } catch (e: kotlin.Exception) {
+            null
+        }
+        val args = if (toolCall?.function?.name == "update_artifact")
+            toolCall.function.arguments
+        else null
+        val toolId = toolCall?.id
+
+        val toolUseResponse = if (toolCall != null && args != null && toolId != null) {
+            val arg = Json.decodeFromString<UpdateArtifact>(args)
+
+            conversationHistory.add(ChatMessage(Role.ASSISTANT.value, "", arrayOf(toolCall)))
+            val updatedArtifact = if (arg.orgStr.isNullOrEmpty()) {
+                artifact.artifact + "\n${arg.repStr}"
+            } else artifact.artifact.replace(arg.orgStr, arg.repStr)
+            val originalArtifactStr = arg.orgStr
+            val replaceArtifactStr = arg.repStr
+
+            conversationHistory.add(
+                ChatMessage(
+                    Role.TOOL.value,
+                    "Comment updated successfully",
+                    tool_call_id = toolId
+                )
+            )
+
+            val chatCompletion = client.post(base_url + chatEndPoint) {
+                this.contentType(ContentType.Application.Json)
+                setBody(
+                    ChatRequest(
+                        MODEL,
+                        "",
+                        conversationHistory.toTypedArray(),
+                        arrayOf(updateArtifactTool)
+                    )
+                )
+                timeout {
+                    requestTimeoutMillis = (1000 * 60) * 5
                 }
-            } catch (e: Exception) {
-                e.printStackTrace()
-                content
-            }.replace("<comment>","").replace("</comment>","")
-
-            return CommentResponse(
+            }.body<ChatCompletion>()
+            CommentResponse(
                 artifact.artifact,
                 updatedArtifact,
                 newComment,
-                assistantComment,
+                chatCompletion.choices.first().message.content,
                 originalArtifactStr,
                 replaceArtifactStr
             )
-        }catch (e: Exception){
-            return Response.ErrorResponse(e.message ?: "Something went wrong")
+        } else {
+            null
         }
+
+        return toolUseResponse
     }
 
     private fun createConversationHistory(
@@ -117,30 +192,5 @@ Example scenarios:
         conversationHistory.add(ChatMessage(Role.USER.value, "<comment>$newComment</comment>"))
 
         return conversationHistory
-    }
-
-    fun getUpdateArtifact(content: String): Pair<String, String>? {
-        return try {
-            val updateArtifact = content.substring(
-                content.indexOf("<update_artifact>"),
-                content.indexOf("</update_artifact>") + "</update_artifact>".length
-            )
-            val original = updateArtifact.substring(
-                updateArtifact.indexOf("<org>"),
-                updateArtifact.indexOf("</org>") + "</org>".length
-            )
-            val replace = updateArtifact.substring(
-                updateArtifact.indexOf("<rep>"),
-                updateArtifact.indexOf("</rep>") + "</rep>".length
-            )
-            Pair(
-                original.removePrefix("<org>").removeSuffix("</org>").trim(),
-                replace.removePrefix("<rep>").removeSuffix("</rep>").trim()
-            )
-
-        } catch (e: Exception) {
-            e.printStackTrace()
-            null
-        }
     }
 }
