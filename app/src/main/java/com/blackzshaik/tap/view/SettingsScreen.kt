@@ -59,6 +59,7 @@ fun SettingsScreen(viewModel: SettingsViewModel = hiltViewModel(),showSnackbar:(
 fun SettingsScreenContent(uiState: SettingsUiState,handleIntent: (SettingsIntent) -> Unit = {}) {
     val (userName, onUserNameChange) = remember (uiState.userName){ mutableStateOf<String>(uiState.userName) }
     val (assistantName, onAssistantName) = remember (uiState.assistantName){ mutableStateOf<String>(uiState.assistantName) }
+    val (serverUrl, onServerUrlChange) = remember (uiState.serverUrl){ mutableStateOf<String>(uiState.serverUrl) }
 
     Box(
         Modifier
@@ -66,6 +67,26 @@ fun SettingsScreenContent(uiState: SettingsUiState,handleIntent: (SettingsIntent
             .background(MaterialTheme.colorScheme.surface)
     ) {
         Column() {
+            Column(
+                Modifier
+                    .padding(8.dp)
+                    .clip(RoundedCornerShape(16.dp))
+                    .background(MaterialTheme.colorScheme.primaryContainer)
+            ) {
+                Text(
+                    "Server URL",
+                    Modifier.padding(start = 16.dp, top = 8.dp),
+                    color = MaterialTheme.colorScheme.onPrimaryContainer
+                )
+                TAPTextField(Modifier.padding(2.dp),
+                    serverUrl,
+                    onServerUrlChange,
+                    "eg: http://127.0.0.1:8080", maxLines = 1)
+                Text("Endpoint will be added automatically :/v1/chat/completion",
+                    modifier = Modifier.padding(start = 16.dp, bottom = 8.dp),
+                    style = MaterialTheme.typography.bodySmall,
+                    color =MaterialTheme.colorScheme.onPrimaryContainer )
+            }
             Column(
                 Modifier
                     .padding(8.dp)
@@ -142,7 +163,7 @@ fun SettingsScreenContent(uiState: SettingsUiState,handleIntent: (SettingsIntent
         Row(Modifier.align(Alignment.BottomCenter).fillMaxWidth(0.75f).padding(16.dp), horizontalArrangement = Arrangement.SpaceBetween){
             TAPIconButton(Modifier, {}, Icons.Default.Close)
             TAPIconButton(Modifier, {
-                handleIntent(SettingsIntent.SaveSettings)
+                handleIntent(SettingsIntent.SaveSettings(userName, assistantName, uiState.commentsDepths, serverUrl))
             }, Icons.Default.Done)
         }
     }

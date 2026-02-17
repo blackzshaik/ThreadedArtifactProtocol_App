@@ -36,4 +36,18 @@ You are a helpful AI chat bot.
         }
     }
 
+    suspend inline fun <reified T>HttpClient.postCall(path:String,body:T):Response{
+       return try {
+            this.post(base_url + path) {
+                this.contentType(ContentType.Application.Json)
+                setBody(body)
+                this.timeout {
+                    requestTimeoutMillis = 300000
+                }
+            }.body<Response>()
+        }catch (e:Exception){
+             Response.ErrorResponse(e.message ?: "Something went wrong")
+        }
+    }
+
 }

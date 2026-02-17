@@ -13,7 +13,8 @@ data class ChatCompletion(
     val usage: Usage,
     val stats: Map<String, String> = emptyMap(), // Default to an empty map if no stats are present
     val system_fingerprint: String
-)
+):Response
+
 @Serializable
 data class Choice(
     val index: Int,

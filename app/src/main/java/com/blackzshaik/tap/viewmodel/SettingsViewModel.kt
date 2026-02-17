@@ -4,6 +4,7 @@ import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.blackzshaik.tap.domain.AssistantNamePreferenceUseCase
 import com.blackzshaik.tap.domain.CommentsDepthPreferenceUseCase
+import com.blackzshaik.tap.domain.ServerURLPreferenceUseCase
 import com.blackzshaik.tap.domain.UserNamePreferenceUseCase
 import com.blackzshaik.tap.intent.SettingsIntent
 import com.blackzshaik.tap.utils.CommentsDepth
@@ -20,7 +21,8 @@ import javax.inject.Inject
 class SettingsViewModel @Inject constructor(
     private val userNamePreferenceUseCase: UserNamePreferenceUseCase,
     private val assistantNamePreferenceUseCase: AssistantNamePreferenceUseCase,
-    private val commentsDepthPreferenceUseCase: CommentsDepthPreferenceUseCase
+    private val commentsDepthPreferenceUseCase: CommentsDepthPreferenceUseCase,
+    private val serverURLPreferenceUseCase: ServerURLPreferenceUseCase
 ): ViewModel() {
 
     private val _uiState = MutableStateFlow(SettingsUiState())
@@ -33,12 +35,14 @@ class SettingsViewModel @Inject constructor(
                     val userName = userNamePreferenceUseCase()
                     val assistantName = assistantNamePreferenceUseCase()
                     val commentsDepth = commentsDepthPreferenceUseCase()
+                    val serverUrl = serverURLPreferenceUseCase()
 
                     _uiState.update {
                         it.copy(
                             userName = userName,
                             assistantName = assistantName,
-                            commentsDepths = commentsDepth
+                            commentsDepths = commentsDepth,
+                            serverUrl= serverUrl
                         )
                     }
                 }
@@ -58,11 +62,12 @@ class SettingsViewModel @Inject constructor(
                 }
             }
 
-            SettingsIntent.SaveSettings -> {
+            is SettingsIntent.SaveSettings -> {
                 viewModelScope.launch (Dispatchers.IO){
-                    userNamePreferenceUseCase(_uiState.value.userName)
-                    assistantNamePreferenceUseCase(_uiState.value.assistantName)
-                    commentsDepthPreferenceUseCase(_uiState.value.commentsDepths)
+                    userNamePreferenceUseCase(intent.name)
+                    assistantNamePreferenceUseCase(intent.assistantName)
+                    commentsDepthPreferenceUseCase(intent.commentsDepth)
+                    serverURLPreferenceUseCase(intent.serverUrl)
                     _uiState.update {
                         it.copy(showUpdateSuccess = true)
                     }
@@ -77,5 +82,6 @@ data class SettingsUiState(
     val userName:String = "",
     val assistantName:String = "",
     val commentsDepths: CommentsDepth = CommentsDepth.MINIMUM,
-    val showUpdateSuccess:Boolean = false
+    val showUpdateSuccess:Boolean = false,
+    val serverUrl:String = ""
 )
