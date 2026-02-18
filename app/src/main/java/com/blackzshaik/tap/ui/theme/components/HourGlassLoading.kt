@@ -37,7 +37,7 @@ fun HourGlassLoading(){
     Icon(
         painter = painterResource(R.drawable.round_hourglass_top_24),
         "",
-        tint = MaterialTheme.colorScheme.onPrimary,
+        tint = MaterialTheme.colorScheme.onSecondaryContainer,
         modifier = Modifier
             .graphicsLayer {
 

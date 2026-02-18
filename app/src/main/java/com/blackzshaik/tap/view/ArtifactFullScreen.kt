@@ -71,7 +71,7 @@ fun ArtifactFullScreenContent(
             val artifactMarkDown = uiState.artifact
             val updatedArtifactStrMarkDown = uiState.updatedArtifactStr
 
-            val starPost = artifactMarkDown.indexOf(updatedArtifactStrMarkDown)
+            val starPost = artifactMarkDown.indexOf(updatedArtifactStrMarkDown).takeIf { it != -1 } ?: 0
             val start = artifactMarkDown.take(starPost)
             val change = if (starPost ==0 ){
                 artifactMarkDown.substring(starPost, updatedArtifactStrMarkDown.length)
@@ -128,47 +128,6 @@ fun ArtifactFullScreenContent(
                 )
             }
         }
-//    }
-//    Column(
-//        Modifier
-//            .fillMaxSize()
-//            .background(color = MaterialTheme.colorScheme.primaryContainer)
-//    ) {
-//        Box(
-//            Modifier
-//                .padding(vertical = 8.dp, horizontal = 8.dp)
-//                .clip(RoundedCornerShape(4.dp))
-//                .background(MaterialTheme.colorScheme.secondaryContainer)
-//        ) {
-//            Text(
-//                uiState.prompt,
-//                Modifier
-//                    .fillMaxWidth()
-//                    .padding(vertical = 8.dp, horizontal = 8.dp),
-//                style = MaterialTheme.typography.titleMedium,
-//                color = MaterialTheme.colorScheme.onPrimaryContainer
-//            )
-//        }
-//
-//
-//        Box(
-//            Modifier
-//                .padding(horizontal = 8.dp)
-//                .fillMaxHeight()
-//                .weight(1f)
-//                .padding(bottom = 8.dp)
-//                .clip(RoundedCornerShape(4.dp))
-//                .background(MaterialTheme.colorScheme.secondaryContainer)
-//        ) {
-//            Text(
-//                , Modifier
-//                    .verticalScroll(rememberScrollState())
-//                    .padding(vertical = 8.dp, horizontal = 8.dp)
-//                    .fillMaxWidth()
-//                    .fillMaxHeight(), color = MaterialTheme.colorScheme.onSecondaryContainer
-//            )
-//        }
-
         VersionNavigator(handleIntent, uiState)
     }
 

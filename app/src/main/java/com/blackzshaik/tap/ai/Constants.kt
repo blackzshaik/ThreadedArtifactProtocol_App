@@ -1,8 +1,6 @@
 package com.blackzshaik.tap.ai
 
-//TODO; add this to get from settings!
-const val base_url = "http://192.168.0.7:1234/v1/"
-const val chatEndPoint = "chat/completions"
+const val chatEndPoint = "/v1/chat/completions"
 
 //for fast inference
 //const val MODEL = "gemma-3-4b-it-qat"

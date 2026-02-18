@@ -85,7 +85,9 @@ dependencies {
     implementation("io.ktor:ktor-serialization-kotlinx-json:3.4.0")
     implementation("io.ktor:ktor-client-auth:3.4.0")
     implementation("io.ktor:ktor-client-websockets:3.4.0")
+    implementation("io.ktor:ktor-client-logging:3.4.0")
     implementation("org.jetbrains.kotlinx:kotlinx-serialization-json:1.10.0")
+    implementation("org.slf4j:slf4j-android:1.7.36")
 
     implementation("org.jetbrains:markdown:0.7.3")
 

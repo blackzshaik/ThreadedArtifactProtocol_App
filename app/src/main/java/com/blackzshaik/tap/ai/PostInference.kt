@@ -5,49 +5,39 @@ import com.blackzshaik.tap.ai.model.ChatMessage
 import com.blackzshaik.tap.ai.model.ChatRequest
 import com.blackzshaik.tap.ai.model.PostResponse
 import com.blackzshaik.tap.ai.model.Response
+import com.blackzshaik.tap.ai.utils.postChat
 import io.ktor.client.HttpClient
-import io.ktor.client.call.body
-import io.ktor.client.plugins.timeout
-import io.ktor.client.request.post
-import io.ktor.client.request.setBody
-import io.ktor.http.ContentType
-import io.ktor.http.contentType
 
 object PostInference {
     private const val POST_SYSTEM_INSTRUCTION = """
-You are a helpful AI chat bot.
+You are an Expert Artifact Generator. Your goal is to convert a User's request into a structured Initial Artifact.
+You must NOT chat. 
+You must NOT explain yourself.
+If the user's request is vague, make a reasonable assumption to generate a valid artifact.
+The Artifact should be a high-quality content based on the user's request, keep it short but informative, and honestly fulfils user's request.
 """
-    suspend operator fun invoke(client: HttpClient, message: String): Response {
+
+    suspend operator fun invoke(client: HttpClient, serverUrl: String, message: String): Response {
         val conversationHistory = mutableListOf<ChatMessage>()
         conversationHistory.add(ChatMessage(Role.SYSTEM.value, POST_SYSTEM_INSTRUCTION))
         conversationHistory.add(ChatMessage(Role.USER.value, message))
-        return try {
-            client.post(base_url + chatEndPoint) {
-                this.contentType(ContentType.Application.Json)
-                setBody(ChatRequest(MODEL, "", conversationHistory.toTypedArray(),emptyArray()))
-                this.timeout {
-                    requestTimeoutMillis = 300000
-                }
-            }.body<ChatCompletion>().let {
-                return PostResponse(it.choices.first().message.content)
-            }
-        }catch (e:Exception){
-            Response.ErrorResponse(e.message ?: "Something went wrong")
+
+        return client.postChat<ChatRequest, ChatCompletion>(
+            serverUrl,
+            ChatRequest(
+                MODEL,
+                "",
+                conversationHistory.toTypedArray(),
+                emptyArray()
+            )
+        ).let {
+            if (it.body != null){
+                PostResponse(it.body.choices.first().message.content)
+            }else
+                it.error ?: Response.ErrorResponse("Something went wrong")
         }
+
     }
 
-    suspend inline fun <reified T>HttpClient.postCall(path:String,body:T):Response{
-       return try {
-            this.post(base_url + path) {
-                this.contentType(ContentType.Application.Json)
-                setBody(body)
-                this.timeout {
-                    requestTimeoutMillis = 300000
-                }
-            }.body<Response>()
-        }catch (e:Exception){
-             Response.ErrorResponse(e.message ?: "Something went wrong")
-        }
-    }
 
 }

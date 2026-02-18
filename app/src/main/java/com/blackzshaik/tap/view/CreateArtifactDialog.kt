@@ -115,12 +115,16 @@ fun CreateArtifactDialog(
                         color = MaterialTheme.colorScheme.onPrimary
                     )
 
+                    LaunchedEffect(animateHourGlass) {
+                        animateHourGlass = true
+                    }
+
                     LaunchedEffect(Unit) {
                         red.animateTo(
                             Color.Gray, animationSpec =
                                 infiniteRepeatable(
-                                    animation = tween(1000, easing = LinearEasing),
-                                    repeatMode = RepeatMode.Reverse
+                                    animation = tween(1500, easing = LinearEasing),
+                                    repeatMode = RepeatMode.Restart
                                 )
                         )
                     }
@@ -135,6 +139,7 @@ fun CreateArtifactDialog(
                             )
                         )
                     }
+
                     Spacer(Modifier.height(16.dp))
                     HourGlassLoading()
                 }

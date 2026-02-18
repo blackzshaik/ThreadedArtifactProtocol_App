@@ -11,6 +11,7 @@ import javax.inject.Singleton
 @Singleton
 class PreferencesRepository @Inject constructor(@ApplicationContext private val context: Context) {
 
+    val data = context.dataStore.data
     val userName = context.dataStore.data.map { preferences ->
         preferences[USER_NAME] ?: "User"
     }
