@@ -14,32 +14,31 @@ class AddCommentUseCase @Inject constructor(
     private val databaseRepository: DatabaseRepository,
     private val networkRepository: NetworkRepository,
     private val getAllParentCommentsUseCase: GetAllParentCommentsUseCase,
+    private val getOptimalCommentsUseCase: GetOptimalCommentsUseCase,
     private val commentsDepthPreferenceUseCase: CommentsDepthPreferenceUseCase
 ) {
     suspend operator fun invoke(
         artifactId: String,
         newComment: String,
-        selectedComment:Comment? = null,
+        selectedComment: Comment? = null,
         commentList: List<Comment> = emptyList()
     ): Artifact {
-        val artifact = databaseRepository.getArtifactById(artifactId)
+        val originalArtifact = databaseRepository.getArtifactById(artifactId)
         val commentsDepth = commentsDepthPreferenceUseCase()
 
-        val parentComments = when(commentsDepth) {
+        val parentComments = when (commentsDepth) {
             CommentsDepth.MINIMUM -> {
-                //single comment without context or replies
-                 selectedComment?.let {
-                    getAllParentCommentsUseCase(commentList, selectedComment)
+                //either single comment main comment or
+                //as reply select all parent
+                selectedComment?.let {
+                    getAllParentCommentsUseCase(commentList, selectedComment) + selectedComment
                 } ?: emptyList()
             }
-            CommentsDepth.OPTIMAL -> {
-                val replies = selectedComment?.let {
-                    getAllParentCommentsUseCase(commentList, selectedComment)
-                }
 
-                //only top level comments with replies or current
-                commentList.filter { it.parentId == artifact._id }.plus(replies ?: emptyList())
+            CommentsDepth.OPTIMAL -> {
+                getOptimalCommentsUseCase(artifactId, commentList, selectedComment)
             }
+
             CommentsDepth.FULL -> {
                 //all comments
                 commentList
@@ -47,68 +46,81 @@ class AddCommentUseCase @Inject constructor(
         }
 
 
-
         val userCommentParentID = try {
             when (commentsDepth) {
                 CommentsDepth.MINIMUM -> {
                     parentComments.last().id
                 }
+
                 else -> {
                     selectedComment?.id ?: artifactId
                 }
             }
-        } catch (nse: NoSuchElementException) {
-            artifact._id
+        } catch (_: NoSuchElementException) {
+            originalArtifact._id
         }
 
+
+        val userCommentId = UUID.randomUUID().toString()
+        val assistantCommentId = UUID.randomUUID().toString()
+
+        databaseRepository.updateReplyCommentId(selectedComment?.id, userCommentId)
+
         val userComment = Comment(
-            id = UUID.randomUUID().toString(),
-            artifact._id,
+            id = userCommentId,
+            originalArtifact._id,
             userCommentParentID,
             false,
             Role.USER.value,
             newComment,
+            parentCommentId = selectedComment?.id ?: originalArtifact._id,
+            replyCommentId = assistantCommentId,
             repliedToCommentId = selectedComment?.id,
             repliedToComment = selectedComment?.content
         )
         databaseRepository.insertComment(userComment)
 
-        val response = networkRepository.addComment(artifact, newComment, parentComments)
+        val response = networkRepository.addComment(
+            originalArtifact,
+            newComment,
+            parentComments.sortedBy { it.time })
 
         val assistantComment = Comment(
-            id = UUID.randomUUID().toString(),
-            artifact._id,
+            id = assistantCommentId,
+            originalArtifact._id,
             userComment.id,
             false,
             Role.ASSISTANT.value,
-            response.assistantComment
+            response.assistantComment,
+            parentCommentId = userCommentId
         )
 
         databaseRepository.insertComment(assistantComment)
-        val updatedArtifact = artifact.copy(
-            artifact = response.updatedArtifact ?: artifact.artifact,
-            artifactVersion = artifact.artifactVersion.takeIf { response.updatedArtifact != null }
-                ?.plus(1.0f) ?: artifact.artifactVersion,
+        val updatedArtifact = originalArtifact.copy(
+            artifact = response.updatedArtifact ?: originalArtifact.artifact,
+            artifactVersion = originalArtifact.artifactVersion.takeIf { response.updatedArtifact != null }
+                ?.plus(1.0f) ?: originalArtifact.artifactVersion,
             time = System.currentTimeMillis(),
-            commentCount = artifact.commentCount + 1
+            commentCount = originalArtifact.commentCount + 1
         )
 
-        updatedArtifact.let {
-            databaseRepository.updateArtifact(it)
-        }
-        databaseRepository.insertArtifactHistory(
-            ArtifactHistory(
-                _id = UUID.randomUUID().toString(),
-                artifactId = artifact._id,
-                originalArtifact = response.originalArtifact,
-                updatedArtifact = response.updatedArtifact ?: "",
-                userCommentId = userComment.id,
-                assistantCommentId = assistantComment.id,
-                originalArtifactStr = response.originalArtifactStr ?: "",
-                replaceArtifactStr = response.replaceArtifactStr ?: "",
-                version = updatedArtifact.artifactVersion
+        databaseRepository.updateArtifact(updatedArtifact)
+
+        if (response.updatedArtifact != null && originalArtifact.artifact != response.updatedArtifact) {
+            databaseRepository.insertArtifactHistory(
+                ArtifactHistory(
+                    _id = UUID.randomUUID().toString(),
+                    artifactId = originalArtifact._id,
+                    originalArtifact = response.originalArtifact,
+                    updatedArtifact = response.updatedArtifact ?: "",
+                    userCommentId = userComment.id,
+                    assistantCommentId = assistantComment.id,
+                    originalArtifactStr = response.originalArtifactStr ?: "",
+                    replaceArtifactStr = response.replaceArtifactStr ?: "",
+                    version = updatedArtifact.artifactVersion
+                )
             )
-        )
+        }
 
         return updatedArtifact
     }

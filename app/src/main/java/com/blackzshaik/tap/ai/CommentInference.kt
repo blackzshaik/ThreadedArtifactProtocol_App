@@ -19,6 +19,8 @@ import kotlinx.serialization.json.Json
 
 object CommentInference {
 
+    const val USER_NAME_TAG = "{{userName}}"
+    const val AI_NAME_TAG = "{{aiName}}"
 
     private const val COMMENT_SYSTEM_INSTRUCTION = """
 You are a Collaborative Revision Engine. You manage a digital artifact based on user feedback.
@@ -35,8 +37,8 @@ on that case you can just reply with an explanation.
 User will provide the comment with <comment> tag.
 
 Notes:
-Your name: {{aiName}}
-User's name: {{userName}}
+Your name: $AI_NAME_TAG
+User's name: $USER_NAME_TAG
 You can use this during comments and also the user will use it in context.
 
 
@@ -77,26 +79,36 @@ RULES:
 
     suspend operator fun invoke(
         client: HttpClient,
-        serverUrl:String,
+        serverUrl: String,
         artifact: Artifact,
         newComment: String,
         commentHistory: List<Comment>,
-        userName:String = "User",
-        assistantName:String = "Assistant"
+        userName: String = "User",
+        assistantName: String = "Assistant"
     ): Response {
-        val conversationHistory = createConversationHistory(artifact, commentHistory, newComment)
+        val conversationHistory =
+            createConversationHistory(artifact, commentHistory, newComment, userName, assistantName)
         try {
 
-            val response = client.postChat<ChatRequest, ChatCompletion>(serverUrl,ChatRequest(
-                MODEL,
-                "",
-                conversationHistory.toTypedArray(),
-                tools = arrayOf(updateArtifactTool)
-            ))
-            if (response.body == null){
+            val response = client.postChat<ChatRequest, ChatCompletion>(
+                serverUrl, ChatRequest(
+                    MODEL,
+                    "",
+                    conversationHistory.toTypedArray(),
+                    tools = arrayOf(updateArtifactTool)
+                )
+            )
+            if (response.body == null) {
                 return response.error ?: Response.ErrorResponse("Something went wrong")
             }
-            return checkAndUseTool(client, serverUrl,conversationHistory, response.body, artifact, newComment)
+            return checkAndUseTool(
+                client,
+                serverUrl,
+                conversationHistory,
+                response.body,
+                artifact,
+                newComment
+            )
                 ?: CommentResponse(
                     artifact.artifact,
                     null,
@@ -113,7 +125,7 @@ RULES:
 
     suspend fun checkAndUseTool(
         client: HttpClient,
-        serverUrl:String,
+        serverUrl: String,
         conversationHistory: MutableList<ChatMessage>,
         chatCompletion: ChatCompletion?,
         artifact: Artifact,
@@ -140,23 +152,34 @@ RULES:
             val originalArtifactStr = arg.orgStr
             val replaceArtifactStr = arg.repStr
 
+            val index = conversationHistory.indexOfFirst { it.role == Role.ASSISTANT.value }
+            conversationHistory[index] = ChatMessage(Role.ASSISTANT.value, updatedArtifact)
+
+            val msg = if (updatedArtifact == artifact.artifact) {
+                "Artifact not updated"
+            } else {
+                "Artifact updated"
+            }
+
             conversationHistory.add(
                 ChatMessage(
                     Role.TOOL.value,
-                    "Artifact updated successfully",
+                    msg,
                     tool_call_id = toolId
                 )
             )
 
-                val toolResponse = client.postChat<ChatRequest, ChatCompletion>( serverUrl,ChatRequest(
+            val toolResponse = client.postChat<ChatRequest, ChatCompletion>(
+                serverUrl, ChatRequest(
                     MODEL,
                     "",
                     conversationHistory.toTypedArray(),
                     arrayOf(updateArtifactTool)
-                ))
+                )
+            )
 
             if (toolResponse.body == null) return null
-            else{
+            else {
                 toolResponse.let {
                     CommentResponse(
                         artifact.artifact,
@@ -178,7 +201,9 @@ RULES:
     private fun createConversationHistory(
         artifact: Artifact,
         commentHistory: List<Comment>,
-        newComment: String
+        newComment: String,
+        userName: String,
+        assistantName: String
     ): MutableList<ChatMessage> {
         val conversationHistory = mutableListOf<ChatMessage>()
 
@@ -186,6 +211,8 @@ RULES:
             ChatMessage(
                 Role.SYSTEM.value,
                 COMMENT_SYSTEM_INSTRUCTION
+                    .replace(USER_NAME_TAG, userName)
+                    .replace(AI_NAME_TAG, assistantName)
             )
         )
 

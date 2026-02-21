@@ -15,7 +15,9 @@ data class Comment (
     var isReply:Boolean = false,
     var role: String = "",
     var content:String = "",
-    @Ignore var replyList:List<Comment> = emptyList(),
+    var parentCommentId: String? = null,
+    @Ignore var replyComment:Comment? = null,
+    var replyCommentId:String? = null,
     var time: Long = System.currentTimeMillis(),
     var repliedToCommentId:String? = null,
     var repliedToComment:String? = null

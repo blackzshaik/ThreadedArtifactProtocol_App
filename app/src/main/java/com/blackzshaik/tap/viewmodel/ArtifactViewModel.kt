@@ -34,6 +34,7 @@ class ArtifactViewModel @Inject constructor(
     val uiState: StateFlow<ArtifactUiState> = _uiState.asStateFlow()
 
     private var artifact: Artifact? = null
+    private var flattenedCommentsList = emptyList<Comment>()
 
     fun handleIntent(intent: ArtifactIntent) {
         when (intent) {
@@ -52,6 +53,7 @@ class ArtifactViewModel @Inject constructor(
 
 
                     getAllCommentsForArtifact(intent.data._id).collect { comments ->
+                        flattenedCommentsList = comments
                         _uiState.update {
                             it.copy(
                                 commentList = comments
@@ -70,7 +72,7 @@ class ArtifactViewModel @Inject constructor(
                         _uiState.value.artifactId,
                         intent.newComment,
                         _uiState.value.replyAssistantComment,
-                        _uiState.value.commentList
+                        flattenedCommentsList
                     )
 
                     _uiState.update {

@@ -15,4 +15,7 @@ interface CommentDao {
     @Query("SELECT * FROM comment WHERE artifactId = :artifactId")
     fun getCommentsForArtifact(artifactId: String): Flow<List<Comment>>
 
+    @Query("UPDATE comment SET replyCommentId = :userCommentId WHERE id = :id")
+    fun updateReplyCommentId(id: String?, userCommentId: String)
+
 }

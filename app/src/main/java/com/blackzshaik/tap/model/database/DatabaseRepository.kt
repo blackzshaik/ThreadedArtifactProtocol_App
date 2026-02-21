@@ -44,6 +44,9 @@ class DatabaseRepository @Inject constructor(private val artifactDao: ArtifactDa
         return artifactHistoryDao.getHistoryForArtifact(artifactId)
     }
 
+    fun updateReplyCommentId(id: String?, userCommentId: String) {
+        return commentDao.updateReplyCommentId(id, userCommentId)
+    }
 
 
 }
