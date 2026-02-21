@@ -1,7 +1,6 @@
 package com.blackzshaik.tap.view
 
 import androidx.compose.foundation.background
-import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.gestures.detectDragGestures
 import androidx.compose.foundation.interaction.MutableInteractionSource
@@ -10,7 +9,6 @@ import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.Row
-import androidx.compose.foundation.layout.RowScope
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxHeight
 import androidx.compose.foundation.layout.fillMaxSize
@@ -20,7 +18,6 @@ import androidx.compose.foundation.layout.offset
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.lazy.LazyColumn
-import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.lazy.rememberLazyListState
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.CircleShape
@@ -35,8 +32,6 @@ import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
-import androidx.compose.material3.TextField
-import androidx.compose.material3.TextFieldDefaults
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.collectAsState
@@ -62,6 +57,7 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.fromHtml
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.tooling.preview.Preview
+import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.IntOffset
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.zIndex
@@ -75,6 +71,7 @@ import com.blackzshaik.tap.ui.theme.TAPTheme
 import com.blackzshaik.tap.ui.theme.components.HourGlassLoading
 import com.blackzshaik.tap.ui.theme.components.TAPIconButton
 import com.blackzshaik.tap.ui.theme.components.TAPTextField
+import com.blackzshaik.tap.ui.theme.components.ThoughtsDialog
 import com.blackzshaik.tap.utils.toMarkDown
 import com.blackzshaik.tap.viewmodel.ArtifactUiState
 import com.blackzshaik.tap.viewmodel.ArtifactViewModel
@@ -211,10 +208,12 @@ private fun CommentSection(
             ),
             startY = 0f
         )
-        Box(Modifier
-            .fillMaxWidth()
-            .background(gradientTop)
-            .zIndex(1f)) {
+        Box(
+            Modifier
+                .fillMaxWidth()
+                .background(gradientTop)
+                .zIndex(1f)
+        ) {
 
             Text(
                 "Comments",
@@ -230,9 +229,38 @@ private fun CommentSection(
             lazyListState,
             contentPadding = PaddingValues(top = 40.dp, bottom = 72.dp)
         ) {
-            items(uiState.commentList, key = { item -> item.id }) { item ->
-                CommentItem(item, uiState, sdf, handleIntent)
+            @Composable
+            fun Reply(replyComment: Comment?, startPadding: Dp = 0.dp) {
+
+                if (replyComment != null) {
+                    CommentItem(
+                        replyComment,
+                        uiState,
+                        sdf,
+                        handleIntent,
+                        startPadding = startPadding.plus(8.dp)
+                    )
+                    Reply(replyComment.replyComment, startPadding.plus(8.dp))
+                }
+
             }
+            uiState.commentList.forEach { comment ->
+                item {
+                    CommentItem(comment, uiState, sdf, handleIntent)
+                }
+                item {
+                    Spacer(Modifier.height(8.dp))
+                }
+
+                item {
+                    Reply(comment.replyComment)
+                }
+
+
+            }
+//            items(uiState.commentList, key = { item -> item.id }) { item ->
+//                CommentItem(item, uiState, sdf, handleIntent)
+//            }
         }
 
         Spacer(
@@ -336,14 +364,15 @@ private fun CommentItem(
     item: Comment,
     uiState: ArtifactUiState,
     sdf: SimpleDateFormat,
-    handleIntent: (ArtifactIntent) -> Unit
+    handleIntent: (ArtifactIntent) -> Unit,
+    startPadding: Dp = 0.dp
 ) {
     Column(
         Modifier
             .padding(horizontal = 8.dp)
             .padding(bottom = 8.dp)
             .fillMaxWidth()
-            .padding(start = if (item.parentId == uiState.artifactId) 0.dp else 32.dp)
+            .padding(start = startPadding)
             .clip(MaterialTheme.shapes.medium)
             .background(MaterialTheme.colorScheme.tertiaryContainer)
             .padding(4.dp)
@@ -405,9 +434,58 @@ private fun CommentItem(
         }
 
         Spacer(Modifier.height(4.dp))
+        val starIdx = item.content.indexOf("<think>")
+        val endIdx = item.content.indexOf("</think>")
+        val think = if (starIdx > -1 && endIdx > -1)
+            item.content.substring(starIdx, endIdx)
+        else null
+        var showThoughtsDialog by remember { mutableStateOf(false) }
+
+        think?.let { thoughts ->
+
+            Row(
+                Modifier
+                    .padding(4.dp)
+                    .fillMaxWidth()
+                    .clip(CircleShape)
+                    .background(MaterialTheme.colorScheme.primaryContainer)
+                    .clickable {
+                        showThoughtsDialog = true
+                    }.alpha(0.5f),
+                verticalAlignment = Alignment.CenterVertically
+            ) {
+                Icon(
+                    painterResource(R.drawable.rounded_network_intelligence_24),
+                    "",
+                    tint = MaterialTheme.colorScheme.onPrimaryContainer,
+                    modifier = Modifier.padding(4.dp)
+                )
+                Text(
+                    "thoughts:",
+                    color = MaterialTheme.colorScheme.onPrimaryContainer,
+                    style = MaterialTheme.typography.bodySmall,
+                    fontWeight = FontWeight.Bold
+                )
+                Text(
+                    AnnotatedString.fromHtml(thoughts),
+                    color = MaterialTheme.colorScheme.onPrimaryContainer,
+                    style = MaterialTheme.typography.bodyMedium,
+                    modifier = Modifier.padding(start = 4.dp),
+                    maxLines = 1,
+                    overflow = TextOverflow.Ellipsis
+                )
+            }
+            if (showThoughtsDialog) {
+                ThoughtsDialog(thoughts, {
+                    showThoughtsDialog = false
+                })
+            }
+        }
+
         Row(Modifier.padding(horizontal = 8.dp)) {
             Text(
-                AnnotatedString.fromHtml(item.content.toMarkDown()),
+                AnnotatedString.fromHtml(item.content.substring(endIdx.takeIf { it > -1 } ?: 0)
+                    .toMarkDown()),
                 color = MaterialTheme.colorScheme.onTertiaryContainer,
                 modifier = Modifier.weight(1f),
                 style = MaterialTheme.typography.bodyMedium
@@ -458,7 +536,10 @@ private fun ArtifactSection(
                 Modifier
                     .padding(horizontal = 8.dp)
                     .fillMaxHeight()
-                    .clickable(interactionSource = remember { MutableInteractionSource() }, indication = null){
+                    .clickable(
+                        interactionSource = remember { MutableInteractionSource() },
+                        indication = null
+                    ) {
                         showFullScreenButton = !showFullScreenButton
                     }
                     .padding(bottom = 8.dp)
@@ -466,8 +547,14 @@ private fun ArtifactSection(
                     .shadow(4.dp, RoundedCornerShape(4.dp))
                     .background(MaterialTheme.colorScheme.tertiaryContainer)
             ) {
+                val starIdx = uiState.artifact.indexOf("<think>")
+                val endIdx = uiState.artifact.indexOf("</think>")
+                val think = if (starIdx > -1 && endIdx > -1)
+                    uiState.artifact.substring(starIdx, endIdx)
+                else null
                 Text(
-                    AnnotatedString.fromHtml(uiState.artifact.toMarkDown()),
+                    AnnotatedString.fromHtml(uiState.artifact.substring(endIdx.takeIf { it > -1 }
+                        ?: 0).toMarkDown()),
                     Modifier
                         .verticalScroll(rememberScrollState())
                         .padding(vertical = 8.dp, horizontal = 8.dp)
@@ -475,7 +562,38 @@ private fun ArtifactSection(
                         .fillMaxHeight(), color = MaterialTheme.colorScheme.onSecondaryContainer
                 )
 
-                if(showFullScreenButton){
+                if (think != null) {
+                    var showThoughtsDialog by remember { mutableStateOf(false) }
+                    Box(
+                        Modifier
+                            .padding(8.dp)
+                            .align(Alignment.BottomStart),
+                        contentAlignment = Alignment.Center
+                    ) {
+                        TAPIconButton(
+                            Modifier
+                                .align(Alignment.BottomCenter)
+                                .alpha(0.75f),
+                            {
+                                showThoughtsDialog = true
+                            },
+                            {
+                                Icon(
+                                    painterResource(R.drawable.rounded_network_intelligence_24),
+                                    "Show full screen button",
+                                    tint = MaterialTheme.colorScheme.onSecondaryContainer.copy(alpha = 0.5f)
+                                )
+                            }
+                        )
+                    }
+                    if (showThoughtsDialog) {
+                        ThoughtsDialog(think, {
+                            showThoughtsDialog = false
+                        })
+                    }
+                }
+
+                if (showFullScreenButton) {
                     Box(
                         Modifier
                             .padding(8.dp)
@@ -483,7 +601,9 @@ private fun ArtifactSection(
                         contentAlignment = Alignment.Center
                     ) {
                         TAPIconButton(
-                            Modifier.align (Alignment.BottomCenter).alpha(0.75f),
+                            Modifier
+                                .align(Alignment.BottomCenter)
+                                .alpha(0.75f),
                             {
                                 handleIntent(ArtifactIntent.OnClickShowFullScreen)
                             },
@@ -502,7 +622,7 @@ private fun ArtifactSection(
     }
 
     LaunchedEffect(showFullScreenButton) {
-        if (showFullScreenButton){
+        if (showFullScreenButton) {
             delay(3000)
             showFullScreenButton = false
         }
@@ -530,20 +650,22 @@ fun ArtifactScreenPreview() {
                             id = "parent1",
                             role = "user",
                             content = "update this with proper tone first!!!",
-                            parentId = "artifactId"
+                            parentId = "artifactId",
+                            replyComment = Comment(
+                                id = "parent2",
+                                role = "assistant",
+                                content = "<think>Some thoughts</think>Reply ONE:::: I have updated the original artifact with proper tone. Can you check and let me know if there are any issues?",
+                                parentId = "parent1",
+                                replyComment = Comment(
+                                    id = "parent3",
+                                    role = "user",
+                                    content = "update this with proper tone",
+                                    parentId = "parent2"
+                                )
+                            )
                         ),
-                        Comment(
-                            id = "parent2",
-                            role = "assistant",
-                            content = "I have updated the original artifact with proper tone. Can you check and let me know if there are any issues?",
-                            parentId = "parent1"
-                        ),
-                        Comment(
-                            id = "parent3",
-                            role = "user",
-                            content = "update this with proper tone",
-                            parentId = "parent2"
-                        ),
+
+
                         Comment(
                             id = "parent4",
                             role = "assistant",

@@ -1,0 +1,61 @@
+package com.blackzshaik.tap.ui.theme.components
+
+import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.fillMaxHeight
+import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.rememberScrollState
+import androidx.compose.foundation.verticalScroll
+import androidx.compose.material3.ButtonDefaults
+import androidx.compose.material3.MaterialTheme
+import androidx.compose.material3.Text
+import androidx.compose.material3.TextButton
+import androidx.compose.runtime.Composable
+import androidx.compose.ui.Modifier
+import androidx.compose.ui.text.AnnotatedString
+import androidx.compose.ui.text.fromHtml
+import androidx.compose.ui.tooling.preview.Preview
+import androidx.compose.ui.unit.dp
+import androidx.compose.ui.window.Dialog
+import com.blackzshaik.tap.ui.theme.TAPTheme
+import com.blackzshaik.tap.utils.toMarkDown
+
+@Composable
+fun ThoughtsDialog(thoughts: String, onDismiss: () -> Unit) {
+    Dialog(onDismiss) {
+        Column(Modifier
+            .padding(8.dp)) {
+            Column(Modifier
+                .padding(8.dp)
+                .fillMaxHeight(0.5f)
+                .verticalScroll(rememberScrollState())) {
+                Text(
+                    AnnotatedString.fromHtml(thoughts.toMarkDown()),
+                    color = MaterialTheme.colorScheme.onSecondaryContainer
+                )
+
+            }
+            TextButton(
+                {
+                    onDismiss()
+                }, colors = ButtonDefaults.textButtonColors(
+                    containerColor = MaterialTheme.colorScheme.primaryContainer,
+                    contentColor = MaterialTheme.colorScheme.onPrimaryContainer
+                )
+            ) {
+                Text("Close")
+            }
+        }
+
+    }
+
+}
+
+@Preview
+@Composable
+fun ThoughtsDialogPreview() {
+    val msg =
+        "<think>\nOkay, let me try to figure out what's going on here. The user asked about the capital of India, and I responded with \"New Delhi\". Then they asked about the currency, and I said \"The currency used in India is the Indian Rupee (INR)\". Next, they said \"add it to the artifact!\", so I used the update_artifact tool to add that sentence to the artifact.\n\nNow the user just gave me a response saying \"Artifact updated\". So I need to check if there's anything else they need. Wait, the user's last message was \"add it to the artifact!\", and I called the tool. The system response says \"Artifact updated\", so maybe they want a confirmation.\n\nBut according to the rules, I should respond with a short comment. The user might expect a confirmation that it's added. Let me see. The previous interaction: they wanted to add the currency info to the artifact. I did that via the tool. Now, the system says it's updated, so I should just say something like \"The currency information has been added to the artifact.\" But the instructions say to be brief and concise.\n\nWait, the example says if the user just asks a question, add a comment as a response. But here, the user's last message was \"add it to the artifact!\", which I handled by calling the tool. Now the system says it's updated, so maybe the user is done and I just need to confirm. But the user hasn't asked a new question. Wait, the user's last input was \"add it to the artifact!\", and I did the update. The system response is \"Artifact updated\", so the next step is to reply with a short comment.\n\nThe rules say: \"Then briefly explain about the changes made as your comment.\" So I should write a comment like \"Added currency information to the artifact.\" But the user's name is {{userName}}, and my name is {{aiName}}. Wait, in the example, the user's name is {{userName}} and the AI's name is {{aiName}}.\n\nWait, the problem says: \"You MUST not chat.\" So I shouldn't have a chat, just a comment. The user's comment was \"add it to the artifact!\", and I used the tool. Now the system says it's updated, so I need to output a comment that explains the change.\n\nThe instructions say: \"Then briefly explain about the changes made as your comment.\" So the comment should be something like \"The currency information has been added to the artifact.\" But the user might want it more concise.\n\nWait, the previous messages: The user asked about the capital, I said New Delhi. Then they asked about currency, I said the sentence. Then they said \"add it to the artifact!\" so I updated the artifact with that sentence. Now the system says it's updated, so I need to respond with a comment that says it's added.\n\nBut the user's last message was \"add it to the artifact!\", so the AI's response here is the confirmation. The rules say: \"When updating if the text needs to replaced always include the same text including the formatting.\" But in this case, the update was done, so the comment should be a brief explanation.\n\nSo the answer here is a short comment like \"Added currency information to the artifact.\" But the problem says \"You MUST not chat.\" So I need to write that as the comment.\n\nWait, the user's instruction says: \"You MUST update the artifact only if the user's comment requires a change.\" The user's comment here was \"add it to the artifact!\", which required the update, so the tool was called. Then the system says \"Artifact updated\", so now I need to output the comment.\n\nThe example says: \"Then briefly explain about the changes made as your comment.\" So the comment should be a short sentence explaining the change.\n\nSo the response here is: \"The currency information has been added to the artifact.\"\n\nBut the user's name is {{userName}}, and the AI's name is {{aiName}}. Wait, the problem says: \"You can use this during comments and also the user will use it in context.\" So maybe in the comment, I should use their names? Like \"Hi {{userName}}, I've added the currency info...\" But the rules say \"briefly explain\", so maybe just the fact.\n\nWait, the problem says: \"Your name: {{aiName}}\", \"User's name: {{userName}}\". So in the comment, I can use {{aiName}} and {{userName}}.\n\nBut in the example, the user's comment was \"What is the capital of India?\" and the AI responded with \"New Delhi\". Then the user asked \"what is the currency used?\" and the AI responded with \"The currency used in India is the Indian Rupee (INR).\" Then the user said \"add it to the artifact!\".\n\nSo the AI called the update_artifact tool with repStr as that sentence. Then the system says \"Artifact updated\", so the AI needs to reply with a comment.\n\nThe comment should be a brief explanation. So the answer here is: \"Added currency information to the artifact.\"\n\nBut the problem says \"You MUST not chat.\" So no extra text. Just the comment.\n\nWait, the user's instruction says: \"Then briefly explain about the changes made as your comment.\" So the comment is the explanation.\n\nSo the final answer is: \"Added currency information to the artifact.\"\n\nBut maybe it's better to be more precise. Since the user said \"add it to the artifact\", the \"it\" refers to the currency info they provided. So the comment is that we added that sentence.\n\nYes, so the comment is \"Added currency information to the artifact.\"\n\nWait, but the problem says: \"You MUST use **update_artifact** tool to update the artifact.\" But in this case, the tool was already called, and the system says it's updated. So now the AI needs to output the comment.\n\nSo the answer here is the comment string.\n\nSo the response should be: \"Added currency information to the artifact.\"\n\nBut the user might want it even shorter. Let me check the rules again.\n\nRule 4: \"Always give a short and concise response as your comment.\"\n\nSo maybe \"Currency info added to artifact.\" or \"Added currency info to artifact.\"\n\nBut the exact text. Let's see. The original sentence was \"The currency used in India is the Indian Rupee (INR).\" So the comment should say that this was added.\n\nBut the user's comment was \"add it to the artifact!\", so the AI is confirming that it's added.\n\nSo the comment is: \"Added the currency information to the artifact.\"\n\nBut the problem says to be concise. Maybe \"Currency info added to artifact.\"\n\nAlternatively, since the user's previous message was about the currency, the AI can say \"Added: The currency used in India is the Indian Rupee (INR).\"\n\nBut the user said \"add it to the artifact\", so the \"it\" refers to the sentence they provided. Wait, the user's last message was \"add it to the artifact!\", so the AI's job was to take the sentence they had (from the previous response) and add it to the artifact.\n\nIn the conversation history:\n\nUser: What is the capital of India?\nAI: New Delhi\nUser: what is the currency used?\nAI: The currency used in India is the Indian Rupee (INR).\nUser: add it to the artifact!\n\nSo the \"it\" refers to the sentence \"The currency used in India is the Indian Rupee (INR).\"\n\nTherefore, the AI added that sentence to the artifact.\n\nSo the comment should be: \"Added the currency information to the artifact.\"\n\nBut to be concise: \"Added currency info to artifact.\"\n\nBut the problem says \"briefly explain about the changes made\". So the answer is a short comment.\n\nI think the answer here is: \"Currency info added to artifact.\"\n\nBut the system response is \"Artifact updated\", so the AI's comment is the confirmation.\n\nYes, so the final answer is: \"Currency info added to artifact.\"\n\nWait, but the user might have a specific format. Let me check the example scenarios.\n\nIn the example, the AI's comment is a response to the user. But in this case, the user's last message was a command to add, so the AI's response is a confirmation.\n\nSo the answer is: \"Added currency information to the artifact.\"\n\nBut the problem says to be concise. Let's go with \"Added currency info to artifact.\"\n\nBut the exact wording from the user's previous response was \"The currency used in India is the Indian Rupee (INR).\"\n\nHmm. Maybe the AI should say: \"The currency information has been added to the artifact.\"\n\nBut the rules say \"short and concise\".\n\nSo perhaps: \"Currency info added.\"\n\nBut the user might want to know what was added.\n\nWait, the user's instruction says: \"You MUST not chat. Not all user comments need modification to the artifact (eg: Why did you use a loop here? or I like this one better), on that case you can just reply with an explanation.\"\n\nIn this case, the user's comment did require a change (adding to the artifact), so the AI did the update and now needs to reply with a short comment.\n\nSo the comment is: \"Added currency information to the artifact.\"\n\nBut maybe even shorter: \"Added currency info.\"\n\nBut to be precise, the user might expect the full context.\n\nWait, the previous message from the AI was \"The currency used in India is the Indian Rupee (INR).\", so adding that sentence.\n\nSo the comment could be: \"Added: The currency used in India is the Indian Rupee (INR).\"\n\nBut that's a bit long. The problem says \"short and concise\".\n\nHmm. Let's see. The user's instruction says \"briefly explain about the changes made\".\n\nSo the answer is: \"Currency info added to artifact.\"\n\nYes, that's concise.\n\nSo the final answer is: \"Currency info added to artifact.\"\n\nBut the problem says to use the user's name and AI's name. Wait, the problem says: \"You can use this during comments and also the user will use it in context.\"\n\nSo maybe in the comment, I should include {{userName}} and {{aiName}}.\n\nFor example: \"Hi {{userName}}, I've added the currency info to the artifact.\"\n\nBut the problem says \"short and concise\", so maybe not. The example in the problem didn't use names.\n\nIn the example scenarios, the AI responds with the answer, not the name.\n\nSo probably, just the concise message without names.\n\nSo the answer is: \"Currency info added to artifact.\"\n\nWait, but the user's comment was \"add it to the artifact!\", so the AI's comment is the confirmation that it's done.\n\nSo I think that's the answer.\n</think>\n\nCurrency info added to artifact."
+    TAPTheme() {
+        ThoughtsDialog(msg) { }
+    }
+}

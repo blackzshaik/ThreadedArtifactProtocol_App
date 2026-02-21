@@ -4,22 +4,20 @@ import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.blackzshaik.tap.domain.AddCommentUseCase
 import com.blackzshaik.tap.domain.AssistantNamePreferenceUseCase
+import com.blackzshaik.tap.domain.CommentToUiCommentMapper
 import com.blackzshaik.tap.domain.GetAllCommentsForArtifact
 import com.blackzshaik.tap.domain.GetArtifactByIdUseCase
 import com.blackzshaik.tap.domain.UserNamePreferenceUseCase
 import com.blackzshaik.tap.intent.ArtifactIntent
 import com.blackzshaik.tap.model.Artifact
 import com.blackzshaik.tap.model.Comment
-import com.blackzshaik.tap.model.datastore.PreferencesRepository
 import dagger.hilt.android.lifecycle.HiltViewModel
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
-import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
-import java.lang.Exception
 import javax.inject.Inject
 
 @HiltViewModel
@@ -29,6 +27,7 @@ class ArtifactViewModel @Inject constructor(
     private val addCommentUseCase: AddCommentUseCase,
     private val userNamePreferenceUseCase: UserNamePreferenceUseCase,
     private val assistantNamePreferenceUseCase: AssistantNamePreferenceUseCase,
+    private val commentToUiCommentMapper: CommentToUiCommentMapper,
 ) : ViewModel() {
     private var _uiState: MutableStateFlow<ArtifactUiState> = MutableStateFlow(ArtifactUiState())
     val uiState: StateFlow<ArtifactUiState> = _uiState.asStateFlow()
@@ -56,7 +55,7 @@ class ArtifactViewModel @Inject constructor(
                         flattenedCommentsList = comments
                         _uiState.update {
                             it.copy(
-                                commentList = comments
+                                commentList = commentToUiCommentMapper.map(comments,artifact?._id)
                             )
                         }
                     }
